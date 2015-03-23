@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -128,17 +129,28 @@ namespace SpirvSpecToJson
                         // opcode NR
                         var opcodeNr = int.Parse(tds[1].InnerText.Trim());
 
+                        // operands
+                        var operands = new JArray();
+
                         for (var i = 2; i < tds.Length; ++i)
                         {
                             var td = tds[i];
-                            var text = td.InnerText;
-
+                            var text = WebUtility.HtmlDecode(td.InnerText);
+                            
                             if (text == "Result <id>")
                             {
-                                // TODO
+                                hasResult = true;
+                                operands.Add(text);
+                                continue;
                             }
-
-                            // TODO
+                            if (text == "<id>\nResult Type")
+                            {
+                                hasResultType = true;
+                                operands.Add(text);
+                                continue;
+                            }
+                            operands.Add(text);
+                            
                         }
 
                         opJson["WordCount"] = wc;
@@ -148,6 +160,8 @@ namespace SpirvSpecToJson
                         opJson["HasVariableWordCount"] = isVariableWC;
                         opJson["HasResult"] = hasResult;
                         opJson["HasResultType"] = hasResultType;
+
+                        opJson["Operands"] = operands;
                     }
 
                     opcodeJson.Add(opJson);
