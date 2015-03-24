@@ -136,21 +136,51 @@ namespace SpirvSpecToJson
                         {
                             var td = tds[i];
                             var text = WebUtility.HtmlDecode(td.InnerText);
+                            var operand = new JObject();
                             
+                            // Result
                             if (text == "Result <id>")
                             {
                                 hasResult = true;
-                                operands.Add(text);
+                                operand["Name"] = StringAnalyzer.GetName(text);
+                                operand["Type"] = "ID";
+                                operands.Add(operand);
                                 continue;
                             }
+                            // Result Type
                             if (text == "<id>\nResult Type")
                             {
                                 hasResultType = true;
-                                operands.Add(text);
+                                operand["Name"] = StringAnalyzer.GetName(text);
+                                operand["Type"] = "ID";
+                                operands.Add(operand);
                                 continue;
                             }
-                            operands.Add(text);
-                            
+                            // Type: ID
+                            if (text.Contains("<id>") && !text.Contains(",") && !text.Contains("Optional"))
+                            {
+                                operand["Name"] = StringAnalyzer.GetName(text);
+                                operand["Type"] = "ID";
+                                operands.Add(operand);
+                                continue;
+                            }
+                            // For variable count of parameters
+                            if (text.Contains("<id>") && text.Contains(","))
+                            {
+                                operand["Name"] = StringAnalyzer.GetParamsName(text);
+                                operand["Type"] = "ID[]";
+                                operands.Add(operand);
+                                continue;
+                            }
+                            // Linked Types
+                            if (td.InnerHtml.Contains("<a href="))
+                            {
+                                operand["Type"] = StringAnalyzer.GetLinkedType(text);
+                                continue;
+                                
+                            }
+
+
                         }
 
                         opJson["WordCount"] = wc;
@@ -169,10 +199,24 @@ namespace SpirvSpecToJson
 
                 specJson["OpCodes"] = opcodeJson;
             }
-
+            
             // save json
             Console.WriteLine("Writing result json");
             File.WriteAllText(jsonFile, specJson.ToString(Formatting.Indented));
         }
+        private string GetName(string text)
+        {
+            var s = new StringBuilder();
+
+            foreach (char t in text)
+            {
+                s.Append(t);
+                if (t == '<')
+                    break;
+            }
+
+            return s.ToString();
+        }
+
     }
 }
