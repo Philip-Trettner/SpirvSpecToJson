@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SpirvSpecToJson
@@ -20,6 +21,8 @@ namespace SpirvSpecToJson
         public static string GetName(string text)
         {
             var s = new StringBuilder();
+
+            // *************************** text.Replace("<id>", "").Trim() // ***********************************
 
             // Case: "Name <ID>"
 
@@ -65,9 +68,15 @@ namespace SpirvSpecToJson
 
             var st = s.ToString();
 
+            ////////// if (string.IsNullOrEmpty(st)) ///////////////////
+
+
             // When there is no name for the parameter, set operand as the name
             if (st == String.Empty)
                 st = "Operands";
+
+
+            //////////////// if (!st.EndsWith("s")) ///////////////////
 
             if (st[st.Length-1] != 's')
                 st += "s";
@@ -75,20 +84,19 @@ namespace SpirvSpecToJson
             return st;
         }
         /// <summary>
-        /// Get the linked type
+        /// Get the type name of operands
         /// </summary>
         /// <param name="text"></param>
         /// <returns></returns>
         public static string GetLinkedType(string text)
         {
             var s = new StringBuilder();
+            string[] sarray = new string[2];
 
-            foreach (var t in text)
+            for (int i = 0; i < text.Length; i++)
             {
-                if (t != '/')
-                    s.Append(t);
+                // TODO
             }
-
             return s.ToString();
         }
     }

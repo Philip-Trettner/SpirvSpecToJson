@@ -175,7 +175,8 @@ namespace SpirvSpecToJson
                             // Linked Types
                             if (td.InnerHtml.Contains("<a href="))
                             {
-                                operand["Type"] = StringAnalyzer.GetLinkedType(text);
+                                //TODO
+                                //operand["Type"] = StringAnalyzer.GetLinkedType(text);
                                 continue;
                                 
                             }
