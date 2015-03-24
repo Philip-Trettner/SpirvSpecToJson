@@ -20,3 +20,42 @@ SPIR-V HTML Specification to JSON converter
 ## JSON Format
 
 *TODO*
+
+### Example for OpExtInst
+
+```
+{
+  "Name": "OpExtInst",
+  "Description": "... description with html tags ...",
+  "DescriptionPlain": "... description without html tags ...",
+  "Capabilities": [],
+  "WordCount": "5 + variable",
+  "WordCountFix": 5,
+  "OpCode": 44,
+  "HasVariableWordCount": true,
+  "HasResult": true,
+  "HasResultType": true,
+  "Operands": [
+    {
+      "Name": "ResultType",
+      "Type": "ID"
+    },
+    {
+      "Name": "Result",
+      "Type": "ID"
+    },
+    {
+      "Name": "Set",
+      "Type": "ID"
+    },
+    {
+      "Name": "Instruction",
+      "Type": "LiteralNumber"
+    },
+    {
+      "Name": "Operands",
+      "Type": "ID[]"
+    }
+  ]
+}
+```
