@@ -19,13 +19,32 @@ SPIR-V HTML Specification to JSON converter
 
 ## JSON Format
 
-*TODO*
+```
+{
+  "Metadata": {
+    "Title": "SPIR-V Specification (Provisional)",
+    "Author": "John Kessenich, LunarG; Boaz Ouriel, Intel",
+    "Revnumber": "version 0.99, revision 29 in progress",
+    "LastUpdate": "Last updated 2015-02-19 18:30:13 MST"
+  },
+  "OpCodes": [
+    ... one object per op ...
+  ],
+  "Enums": [
+    ... one object per enum ...
+  ],
+  "Extensions": [
+    ... one object per extended instruction set ...
+  ]
+}
+```
 
-### Example for OpExtInst
+### Example for Instruction: OpExtInst
 
 ```
 {
   "Name": "OpExtInst",
+  "Category": "Extension",
   "Description": "... description with html tags ...",
   "DescriptionPlain": "... description without html tags ...",
   "Capabilities": [],
@@ -59,3 +78,11 @@ SPIR-V HTML Specification to JSON converter
   ]
 }
 ```
+
+### Example for Enumeration: Decoration
+
+*TODO*
+
+### Example for Extended Instruction Set: GLSL 450
+
+*TODO*
