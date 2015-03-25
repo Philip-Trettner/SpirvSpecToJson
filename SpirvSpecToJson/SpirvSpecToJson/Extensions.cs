@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -87,21 +88,53 @@ namespace SpirvSpecToJson
 
         }
         /// <summary>
-        /// Get the type name of operands
+        /// Get the type and the name of operands that got a link
+        /// 1. Element: Name, 2. Element: Type
         /// </summary>
         /// <param name="text"></param>
-        /// <returns></returns>
-        public static string GetLinkedType(this string text)
+        /// <returns>1. Element: Name
+        /// 2. Element: Type</returns>
+        public static string[] GetLinkedNameAndType(this string text)
         {
-            var s = new StringBuilder();
-            string[] sarray = new string[2];
+            var a = new string[2];
 
-            for (int i = 0; i < text.Length; i++)
+            // Enums 
+            if (!text.Contains("\n"))
             {
-                // TODO
+                a[0] = text.ToCamelCase();
+                a[1] = "Enum";
             }
-            return s.ToString();
+            else
+            {
+                // Type
+                // Name
+
+                // Most of all: sa[0] + sa[1] = Type
+                // 2 Exceptions:
+                // text contains "Kernel"
+                
+                var sa = text.Split();
+
+                if (!text.Contains("Kernel"))
+                {
+                    Debug.Assert(sa.Length > 2);
+                    a[1] = sa[0].ToCamelCase() + sa[1].ToCamelCase();
+
+                    for (int i = 2; i < sa.Length; i++)
+                        a[0] += sa[i].ToCamelCase();
+                }
+                else
+                {
+                    Debug.Assert(sa.Length > 3);
+                    a[1] = sa[0].ToCamelCase() + sa[1].ToCamelCase() + sa[2].ToCamelCase();
+                    for (int i = 3; i < sa.Length; i++)
+                        a[0] += sa[i].ToCamelCase();
+                }
+            }
+            return a;
         }
+
+      
 
         /// <summary>
         /// Convert string into CamelCase
@@ -110,18 +143,22 @@ namespace SpirvSpecToJson
         /// <returns></returns>
         public static string ToCamelCase(this string s)
         {
-            var test = s.Split();
+            var spit = s.Split();
             var sx = new StringBuilder();
             var st = new StringBuilder();
+
+            if (string.IsNullOrEmpty(s))
+                return String.Empty;
+
             // Capitalize
-            foreach (var t in test)
+            foreach (var t in spit)
             {
                 sx.Append(char.ToUpper(t[0]) + t.Substring(1));
                 st.Append(sx);
                 sx.Clear();
             }
 
-            return sx.ToString();
+            return st.ToString();
         }
     }
 }

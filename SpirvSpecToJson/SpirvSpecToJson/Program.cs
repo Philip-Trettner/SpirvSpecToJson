@@ -164,6 +164,11 @@ namespace SpirvSpecToJson
                                 operands.Add(operand);
                                 continue;
                             }
+                            if (text.Contains("literal, label <id>"))
+                            {
+                                //TODO
+                                continue;
+                            }
                             // For variable count of parameters
                             if (text.Contains(","))
                             {
@@ -176,8 +181,10 @@ namespace SpirvSpecToJson
                             // Linked Types
                             if (td.InnerHtml.Contains("<a href="))
                             {
-                                //TODO
-                                //operand["Type"] = StringAnalyzer.GetLinkedType(text);
+                                var a = text.GetLinkedNameAndType();
+                                operand["Name"] = a[0];
+                                operand["Type"] = a[1];
+                                operands.Add(operand);
                                 continue;
                                 
                             }
