@@ -142,7 +142,7 @@ namespace SpirvSpecToJson
                             if (text == "Result <id>")
                             {
                                 hasResult = true;
-                                operand["Name"] = StringAnalyzer.GetName(text);
+                                operand["Name"] = text.GetName();
                                 operand["Type"] = "ID";
                                 operands.Add(operand);
                                 continue;
@@ -151,7 +151,7 @@ namespace SpirvSpecToJson
                             if (text == "<id>\nResult Type")
                             {
                                 hasResultType = true;
-                                operand["Name"] = StringAnalyzer.GetName(text);
+                                operand["Name"] = text.GetName();
                                 operand["Type"] = "ID";
                                 operands.Add(operand);
                                 continue;
@@ -159,7 +159,7 @@ namespace SpirvSpecToJson
                             // Type: ID
                             if (text.Contains("<id>") && !text.Contains(",") && !text.Contains("Optional"))
                             {
-                                operand["Name"] = StringAnalyzer.GetName(text);
+                                operand["Name"] = text.GetName();
                                 operand["Type"] = "ID";
                                 operands.Add(operand);
                                 continue;
@@ -167,7 +167,7 @@ namespace SpirvSpecToJson
                             // For variable count of parameters
                             if (text.Contains(","))
                             {
-                                var a = StringAnalyzer.GetParamsNameAndType(text);
+                                var a = text.GetParamsNameAndType();
                                 operand["Name"] = a[0];
                                 operand["Type"] = a[1];
                                 operands.Add(operand);
