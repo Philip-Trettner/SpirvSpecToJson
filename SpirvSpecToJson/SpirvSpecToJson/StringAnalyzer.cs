@@ -9,79 +9,78 @@ using System.Threading.Tasks;
 namespace SpirvSpecToJson
 {
     /// <summary>
-    /// This class countains helpful methodes for analyzing the Specification 
+    /// Contains helpful methodes for analyzing the Specification 
     /// </summary>
     class StringAnalyzer
     {
         /// <summary>
-        /// Get the Name of an operand with the type ID
+        /// Get the name of an operand with the type ID
         /// </summary>
         /// <param name="text"></param>
         /// <returns>name of operand</returns>
         public static string GetName(string text)
         {
-            var s = new StringBuilder();
+            // 2 Cases:
+            //
+            // <id> Name
+            // Name <id>
+            return text.Replace("<id>", "").Trim();
 
-            // *************************** text.Replace("<id>", "").Trim() // ***********************************
-
-            // Case: "Name <ID>"
-
-            if (text[0] != '<')
-            {
-                foreach (char t in text)
-                {
-                    if (t == '<')
-                        break;
-                    s.Append(t);
-                }
-                var st1 = s.ToString().Trim();
-
-                return st1;
-            }
-
-            // Case: "<ID> Name"
-
-            for (int i = 4; i < text.Length; i++)
-            {
-                s.Append(text[i]);
-            }
-            var st2 = s.ToString().Trim();
-
-            return st2;
         }
         /// <summary>
-        /// Get the Name of the operand list with the type ID
+        /// Get the Name of the operand list with the type ID.
+        /// 1. Element: Name, 2. Element: Type
         /// </summary>
-        /// <param name="text"></param>
-        /// <returns>name of operands</returns>
-        public static string GetParamsName(string text)
+        /// <param name="text">analyzable text</param>
+        /// <returns>1. Element: Name
+        /// 2. Element: Type</returns>
+        public static string[] GetParamsNameAndType(string text)
         {
-            var s = new StringBuilder();
+            var a = new string[2];
 
-            for (int i = 14; i < text.Length; i++)
+            if (text.Contains("<id>"))
             {
-                if (text[i] != ',' && text[i] != ' ')
-                    s.Append(text[i]);
-                else
-                    break;
+                // Format:
+                //
+                // "<id>, <id>, ...
+                // Name, Name"
+
+                var s = text.Replace("<id>, <id>, …", "").Trim();
+
+                s = s.Split()[0].Replace(",", "");
+
+                if (string.IsNullOrEmpty(s))
+                    s = "Operands";
+
+                // Add a "s" for plural if necessary
+                if (!s.EndsWith("s"))
+                    s += "s";
+
+                a[0] = s;
+                a[1] = "ID";
             }
 
-            var st = s.ToString();
+            if (text.Contains("literal"))
+            {
+                // Format:
+                //
+                // "literal, literal, ...
+                // Name"
 
-            ////////// if (string.IsNullOrEmpty(st)) ///////////////////
+                var s = text.Replace("literal, literal, …", "").Trim();
+
+                if (text.Contains("See"))
+                    a[0] = "ExtraOperands";
+                else
+                    a[0] = s;
+
+                a[1] = "LiteralNumber";
+
+            }
 
 
-            // When there is no name for the parameter, set operand as the name
-            if (st == String.Empty)
-                st = "Operands";
+            return a;
 
-
-            //////////////// if (!st.EndsWith("s")) ///////////////////
-
-            if (st[st.Length-1] != 's')
-                st += "s";
-
-            return st;
         }
         /// <summary>
         /// Get the type name of operands

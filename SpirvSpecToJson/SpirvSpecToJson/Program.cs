@@ -165,10 +165,11 @@ namespace SpirvSpecToJson
                                 continue;
                             }
                             // For variable count of parameters
-                            if (text.Contains("<id>") && text.Contains(","))
+                            if (text.Contains(","))
                             {
-                                operand["Name"] = StringAnalyzer.GetParamsName(text);
-                                operand["Type"] = "ID[]";
+                                var a = StringAnalyzer.GetParamsNameAndType(text);
+                                operand["Name"] = a[0];
+                                operand["Type"] = a[1];
                                 operands.Add(operand);
                                 continue;
                             }
