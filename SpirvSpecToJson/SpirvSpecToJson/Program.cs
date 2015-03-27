@@ -185,7 +185,11 @@ namespace SpirvSpecToJson
                                 operand["Name"] = a[0];
                                 operand["Type"] = a[1];
                                 operands.Add(operand);
-                                continue;
+                                continue;                               
+                            }
+                            if (text.Contains("Optional"))
+                            {
+                                //TODO
                                 
                             }
 

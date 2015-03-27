@@ -118,6 +118,7 @@ namespace SpirvSpecToJson
                 if (!text.Contains("Kernel"))
                 {
                     Debug.Assert(sa.Length > 2);
+
                     a[1] = sa[0].ToCamelCase() + sa[1].ToCamelCase();
 
                     for (int i = 2; i < sa.Length; i++)
@@ -126,6 +127,7 @@ namespace SpirvSpecToJson
                 else
                 {
                     Debug.Assert(sa.Length > 3);
+
                     a[1] = sa[0].ToCamelCase() + sa[1].ToCamelCase() + sa[2].ToCamelCase();
                     for (int i = 3; i < sa.Length; i++)
                         a[0] += sa[i].ToCamelCase();
