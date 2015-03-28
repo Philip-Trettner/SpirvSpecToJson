@@ -13,9 +13,9 @@ using Newtonsoft.Json.Linq;
 
 namespace SpirvSpecToJson
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             const string specUrl = @"https://www.khronos.org/registry/spir-v/specs/1.0/SPIRV.html";
             const string cacheFile = "spirv.html";
@@ -60,6 +60,7 @@ namespace SpirvSpecToJson
             }
 
             // op code
+            #region
             {
                 var opcodeJson = new JArray();
 
@@ -137,7 +138,8 @@ namespace SpirvSpecToJson
                             var td = tds[i];
                             var text = WebUtility.HtmlDecode(td.InnerText);
                             var operand = new JObject();
-                            
+
+
                             // Result
                             if (text == "Result <id>")
                             {
@@ -185,12 +187,11 @@ namespace SpirvSpecToJson
                                 operand["Name"] = a[0];
                                 operand["Type"] = a[1];
                                 operands.Add(operand);
-                                continue;                               
                             }
                             if (text.Contains("Optional"))
                             {
                                 //TODO
-                                
+
                             }
 
 
@@ -205,6 +206,9 @@ namespace SpirvSpecToJson
                         opJson["HasResultType"] = hasResultType;
 
                         opJson["Operands"] = operands;
+
+
+
                     }
 
                     opcodeJson.Add(opJson);
@@ -212,24 +216,91 @@ namespace SpirvSpecToJson
 
                 specJson["OpCodes"] = opcodeJson;
             }
-            
+            #endregion
+
+
+            // Enums
+            #region
+            var enumJson = new JArray();
+
+            Console.WriteLine("Scanning Enums");
+
+            foreach (var node in root.SelectNodes("//h3"))
+            {
+                // No empty npdes
+                if (node.Id == "")
+                    continue;
+
+                // Only nodes that starts with "3."
+                if (!node.InnerText.StartsWith("3."))
+                    continue;
+
+                // Magic Number and Instructions aren't Enums!
+                if (node.InnerText == "3.1. Magic Number" || node.InnerText == "3.27. Instructions")
+                    continue;
+
+                var parent = node.ParentNode;
+                var table = parent.LastChild.PreviousSibling;
+                var tbody = table.LastChild.PreviousSibling;
+
+                var data = new JObject();
+                var valuesArray = new JArray();
+                
+
+                data["Name"] = node.InnerText.ToCamelCase();
+
+
+                // Table rows
+                foreach (var tr in tbody.ChildNodes)
+                {
+                    if (tr.InnerText == "\n")
+                        continue;
+
+                    
+                    var valueObj = new JObject();
+
+                    if (tr.ChildNodes.Count > 2)
+                        continue;
+                    foreach (var td in tr.ChildNodes)
+                    {
+                        if (td.InnerText == "\n")
+                            continue;
+
+                        // Value Name
+                        if (td.InnerHtml.Contains("<strong>"))
+                        {
+                            valueObj["Name"] = td.InnerText;                            
+                        }
+                        else
+                        {
+                            // Value
+                            valueObj["Value"] = td.InnerText;                          
+                        }
+
+                                             
+                    }
+                    valuesArray.Add(valueObj);
+
+
+
+                }
+
+                
+
+                data["Values"] = valuesArray;
+
+                enumJson.Add(data);
+
+                specJson["Enums"] = enumJson;
+                continue;
+            }
+            #endregion
+
             // save json
             Console.WriteLine("Writing result json");
             File.WriteAllText(jsonFile, specJson.ToString(Formatting.Indented));
         }
-        private string GetName(string text)
-        {
-            var s = new StringBuilder();
-
-            foreach (char t in text)
-            {
-                s.Append(t);
-                if (t == '<')
-                    break;
-            }
-
-            return s.ToString();
-        }
-
+    
     }
+
 }
