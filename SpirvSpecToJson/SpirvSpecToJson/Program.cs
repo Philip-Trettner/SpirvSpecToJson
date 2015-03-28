@@ -245,8 +245,9 @@ namespace SpirvSpecToJson
 
                 var data = new JObject();
                 var valuesArray = new JArray();
-                
+                var capabilities = new JArray();
 
+                //TODO
                 data["Name"] = node.InnerText.ToCamelCase();
 
 
@@ -256,38 +257,87 @@ namespace SpirvSpecToJson
                     if (tr.InnerText == "\n")
                         continue;
 
-                    
+
                     var valueObj = new JObject();
 
-                    if (tr.ChildNodes.Count > 2)
-                        continue;
-                    foreach (var td in tr.ChildNodes)
+                    // Enums with values and names only. No Capabilities
+                    if (tr.ChildNodes.Count == 5)
                     {
-                        if (td.InnerText == "\n")
-                            continue;
-
-                        // Value Name
-                        if (td.InnerHtml.Contains("<strong>"))
+                        foreach (var td in tr.ChildNodes)
                         {
-                            valueObj["Name"] = td.InnerText;                            
-                        }
-                        else
-                        {
-                            // Value
-                            valueObj["Value"] = td.InnerText;                          
-                        }
+                            if (td.InnerText == "\n")
+                                continue;
 
-                                             
+                            // Value Name
+                            if (td.InnerHtml.Contains("<strong>"))
+                            {
+                                var innerHtml = td.FirstChild.InnerHtml;
+                                var innerText = td.FirstChild.InnerText;
+
+                                var innerOuterHtml = td.FirstChild.FirstChild.OuterHtml;
+                                var innerInnerText = td.FirstChild.FirstChild.InnerText;
+
+
+                                valueObj["Name"] = innerInnerText;
+
+                                //TODO When MultiLine => <br>
+                                valueObj["Comment"] = innerText.Length == innerInnerText.Length
+                                    ? ""
+                                    : innerHtml.Substring(innerOuterHtml.Length + 4).Trim();
+                                valueObj["CommentPlain"] = innerText.Substring(innerInnerText.Length).Trim();
+
+                            }
+                            else
+                            {
+                                // Value
+                                valueObj["Value"] = int.Parse(td.InnerText);
+                            }
+
+
+                        }
+                        valueObj["Capabilities"] = new JArray();
+                        valuesArray.Add(valueObj);
                     }
-                    valuesArray.Add(valueObj);
+
+                    //TODO
+                    // Enums with values, names and capabilities
+                    if (tr.ChildNodes.Count == 7)
+                    {
+                        foreach (var td in tr.ChildNodes)
+                        {
+                            if (td.InnerText == "\n")
+                                continue;
+
+                            // Value Name
+                            if (td.InnerHtml.Contains("<strong>"))
+                            {
+                                if (td.ParentNode.InnerHtml.Contains("a href"))
+                                    valueObj["Name"] = td.InnerText;
+                            }
+                            else
+                            {
+                                // Value
+                                valueObj["Value"] = td.InnerText;
+                            }
 
 
+                        }
+                        valuesArray.Add(valueObj);
+                    }
 
+                    //TODO 
+                    //Enums with values, names, capabilites and extra operands
+                    if (tr.ChildNodes.Count == 9)
+                    {
+                    }
                 }
 
-                
 
                 data["Values"] = valuesArray;
+
+                data["Comment"] = node.NextSibling.NextSibling.FirstChild.InnerHtml;
+                data["CommentPlain"] = node.NextSibling.NextSibling.InnerText;
+
 
                 enumJson.Add(data);
 
@@ -300,7 +350,7 @@ namespace SpirvSpecToJson
             Console.WriteLine("Writing result json");
             File.WriteAllText(jsonFile, specJson.ToString(Formatting.Indented));
         }
-    
+
     }
 
 }
