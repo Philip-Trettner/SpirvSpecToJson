@@ -162,5 +162,34 @@ namespace SpirvSpecToJson
 
             return st.ToString();
         }
+
+        /// <summary>
+        /// Gets the name and the comment of an string like this:
+        /// "Name\nComment"
+        /// </summary>
+        /// <param name="t"></param>
+        /// <returns></returns>
+        public static string[] GetNameAndComment(this string t)
+        {
+            var a = new string[2];
+
+            // Format:
+            //
+            // "Name 
+            // \nComment"
+
+            var index = t.IndexOf("\n");
+
+            if (index != -1)
+            {
+                a[0] = t.Substring(0, index).Trim();
+                a[1] = t.Substring(index).Trim();
+            }
+            else
+                a[0] = t.Trim();
+
+
+            return a;
+        }
     }
 }
