@@ -247,8 +247,10 @@ namespace SpirvSpecToJson
                 var valuesArray = new JArray();
                 var capabilities = new JArray();
 
-                //TODO
+               
                 data["Name"] = node.InnerText.ToCamelCase();
+
+                // TODO JArray for ExtraOperands!
 
 
                 // Table rows
