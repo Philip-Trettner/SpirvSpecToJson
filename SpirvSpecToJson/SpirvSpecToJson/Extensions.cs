@@ -100,9 +100,18 @@ namespace SpirvSpecToJson
 
             // Enums 
             if (!text.Contains("\n"))
-            {
-                a[0] = text.ToCamelCase();
-                a[1] = "Enum";
+            {               
+                if (text.Contains("<id>"))
+                {
+                    a[0] = text.Replace("<id>", "").Trim();
+                    a[1] = "ID";
+
+                }
+                else
+                {
+                    a[0] = text.ToCamelCase();
+                    a[1] = "Enum";
+                }
             }
             else
             {
