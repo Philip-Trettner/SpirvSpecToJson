@@ -97,6 +97,20 @@ namespace SpirvSpecToJson
                     opJson["Description"] = node.ParentNode.InnerHtml.Replace("<br>", "<br />").Trim();
                     opJson["DescriptionPlain"] = node.ParentNode.InnerText.Trim();
 
+                    // Category
+                    {
+                        var n = node.ParentNode;
+
+                        while (n.Name != "div")
+                            n = n.ParentNode;
+
+                        var category = n.ChildNodes.First(x => x.Name == "h4").InnerText;
+                        category = category.Replace("Instructions", "");
+                        category = category.Replace("(Removable)", "");
+                        category = category.Substring(category.IndexOf(' '));
+
+                        opJson["Category"] = category.Trim();
+                    }
                     var tr = node.ParentNode.ParentNode.ParentNode;
                     Debug.Assert(tr.Name == "tr");
 
