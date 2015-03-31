@@ -245,9 +245,7 @@ namespace SpirvSpecToJson
 
                 var data = new JObject();
                 var valuesArray = new JArray();
-                var capabilities = new JArray();
-
-               
+                
                 data["Name"] = node.InnerText.ToCamelCase();
 
                 // TODO JArray for ExtraOperands!
@@ -261,6 +259,10 @@ namespace SpirvSpecToJson
 
 
                     var valueObj = new JObject();
+
+                    var capabilities = new JArray();
+                    var extraOperands = new JArray();
+
 
                     // Enums with values and names only. No Capabilities
                     if (tr.ChildNodes.Count == 5)
@@ -297,13 +299,10 @@ namespace SpirvSpecToJson
 
 
                         }
-                        valueObj["Capabilities"] = new JArray();
-                        valuesArray.Add(valueObj);
+
                     }
 
-                    var capArray = new JArray();
-
-                    //TODO Filtering more than one Capability
+         
 
                     // Enums with values, names and capabilities
                     if (tr.ChildNodes.Count == 7)
@@ -313,7 +312,7 @@ namespace SpirvSpecToJson
                             if (td.InnerText == "\n")
                                 continue;
 
-                            // Value Name
+                            // Value Name or Capabilities
                             if (td.InnerHtml.Contains("<strong>"))
                             {
                                 var innerHtml = td.FirstChild.InnerHtml;
@@ -322,9 +321,15 @@ namespace SpirvSpecToJson
                                 var innerOuterHtml = td.FirstChild.FirstChild.OuterHtml;
                                 var innerInnerText = td.FirstChild.FirstChild.InnerText;
 
-                                if (td.InnerHtml.Contains("Cap"))
+                                // Capabilities
+                                if (td.InnerHtml.Contains("#Cap"))
                                 {
-                                    capArray.Add(innerInnerText);
+                                    capabilities.Add(innerInnerText);
+                                    var secondCap = innerText.Length == innerInnerText.Length
+                                        ? ""
+                                        : innerText.Substring(innerInnerText.Length + 1);
+                                    if(!string.IsNullOrEmpty(secondCap))
+                                        capabilities.Add(secondCap);
                                 }
                                 else
                                 {
@@ -347,15 +352,87 @@ namespace SpirvSpecToJson
 
 
                         }
-                        valueObj["Capabilities"] = capArray;
-                        valuesArray.Add(valueObj);
+
                     }
 
                     //TODO 
                     //Enums with values, names, capabilites and extra operands
-                    if (tr.ChildNodes.Count == 9)
+                    if (tr.ChildNodes.Count > 8)
                     {
+                        foreach (var td in tr.ChildNodes)
+                        {
+                            if (td.InnerText == "\n")
+                                continue;
+
+                            // Value Name, Capabilities or Extra Operands
+                            if (td.InnerHtml.Contains("<strong>"))
+                            {
+                                var innerHtml = td.FirstChild.InnerHtml;
+                                var innerText = td.FirstChild.InnerText;
+
+                                var innerOuterHtml = td.FirstChild.FirstChild.OuterHtml;
+                                var innerInnerText = td.FirstChild.FirstChild.InnerText;
+
+                                // Capabilities
+                                if (td.InnerHtml.Contains("#Cap"))
+                                {
+                                    capabilities.Add(innerInnerText);
+                                    var secondCap = innerText.Length == innerInnerText.Length
+                                        ? ""
+                                        : innerText.Substring(innerInnerText.Length + 1);
+                                    if (!string.IsNullOrEmpty(secondCap))
+                                        capabilities.Add(secondCap);
+                                }
+                                else
+                                {
+                                    valueObj["Name"] = innerInnerText;
+
+                                    //TODO When MultiLine => <br>
+                                    valueObj["Comment"] = innerText.Length == innerInnerText.Length
+                                        ? ""
+                                        : innerHtml.Substring(innerOuterHtml.Length + 4).Trim();
+                                    valueObj["CommentPlain"] = innerText.Substring(innerInnerText.Length).Trim();
+                                }
+
+                            }
+                            else
+                            {
+                                int val;
+                                // Value
+                                if (int.TryParse(td.InnerText, out val))
+                                    valueObj["Value"] = val;
+                                else
+                                {
+                                    if (!String.IsNullOrEmpty(td.InnerText))
+                                    {
+                                        // Extra Operands
+                                        var innerHtml = td.FirstChild.InnerHtml;
+                                        var innerText = td.FirstChild.InnerText;
+                                        var innerOuterHtml = td.FirstChild.FirstChild.OuterHtml;
+                                        var innerInnerText = td.FirstChild.FirstChild.InnerText;
+
+                                        var extraOperand = new JObject();
+                                        extraOperand["Type"] = innerInnerText.ToCamelCase();
+                                        extraOperand["Comment"] = innerInnerText == innerText
+                                            ? ""
+                                            : innerText.Substring(innerInnerText.Length + 1);
+
+
+                                        extraOperands.Add(extraOperand);
+
+                                    }
+                                }
+
+                            }
+
+
+                        }
+
                     }
+
+                    valueObj["Capabilities"] = capabilities;
+                    valueObj["ExtraOperands"] = extraOperands;
+                    valuesArray.Add(valueObj);
                 }
 
 
@@ -368,7 +445,7 @@ namespace SpirvSpecToJson
                 enumJson.Add(data);
 
                 specJson["Enums"] = enumJson;
-                continue;
+
             }
             #endregion
 
