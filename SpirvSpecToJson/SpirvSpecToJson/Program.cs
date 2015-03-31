@@ -47,7 +47,7 @@ namespace SpirvSpecToJson
             // init json
             var specJson = new JObject();
 
-            // metadata
+            #region MetaData
             {
                 var metaJson = new JObject();
 
@@ -58,10 +58,9 @@ namespace SpirvSpecToJson
 
                 specJson["Metadata"] = metaJson;
             }
+            #endregion
 
-            // op code
-
-            #region
+            #region OpCode
 
             {
                 var opcodeJson = new JArray();
@@ -145,7 +144,7 @@ namespace SpirvSpecToJson
                             opJson["WordCountFix"] = int.Parse(wc.Replace(" + variable", "").Trim());
                             opJson["OpCode"] = opcodeNr;
                             opJson["HasVariableWordCount"] = isVariableWC;
-                            
+
 
                             // Result
                             if (text == "Result <id>")
@@ -194,13 +193,13 @@ namespace SpirvSpecToJson
                             }
                             // Optionals
                             else if (text.Contains("Optional"))
-                            {                               
+                            {
                                 var a = text.GetLinkedNameAndType();
                                 operand["Name"] = a[0];
                                 operand["Type"] = "ID?";
                                 operands.Add(operand);
                             }
-                            
+
                         }
                         opJson["HasResult"] = hasResult;
                         opJson["HasResultType"] = hasResultType;
@@ -211,16 +210,17 @@ namespace SpirvSpecToJson
 
                     specJson["OpCodes"] = opcodeJson;
                 }
+            }
 
-                #endregion
+            #endregion
 
+            #region Enums
 
-                // Enums
+            // Array of Enums
+            {
 
-                #region
-
-                // Array of Enums
                 var enumJson = new JArray();
+
 
                 Console.WriteLine("Scanning Enums");
 
@@ -461,14 +461,13 @@ namespace SpirvSpecToJson
                     specJson["Enums"] = enumJson;
 
                 }
-
-                #endregion
-
-                // save json
-                Console.WriteLine("Writing result json");
-                File.WriteAllText(jsonFile, specJson.ToString(Formatting.Indented));
             }
 
+            #endregion
+
+            // save json
+            Console.WriteLine("Writing result json");
+            File.WriteAllText(jsonFile, specJson.ToString(Formatting.Indented));
         }
     }
 }
