@@ -141,6 +141,11 @@ namespace SpirvSpecToJson
                             var text = WebUtility.HtmlDecode(td.InnerText);
                             var operand = new JObject();
 
+                            opJson["WordCount"] = wc;
+                            opJson["WordCountFix"] = int.Parse(wc.Replace(" + variable", "").Trim());
+                            opJson["OpCode"] = opcodeNr;
+                            opJson["HasVariableWordCount"] = isVariableWC;
+                            
 
                             // Result
                             if (text == "Result <id>")
@@ -149,76 +154,65 @@ namespace SpirvSpecToJson
                                 operand["Name"] = text.GetName();
                                 operand["Type"] = "ID";
                                 operands.Add(operand);
-                                continue;
                             }
                             // Result Type
-                            if (text == "<id>\nResult Type")
+                            else if (text == "<id>\nResult Type")
                             {
                                 hasResultType = true;
                                 operand["Name"] = text.GetName();
                                 operand["Type"] = "ID";
                                 operands.Add(operand);
-                                continue;
                             }
                             // Type: ID
-                            if (text.Contains("<id>") && !text.Contains(",") && !text.Contains("Optional"))
+                            else if (text.Contains("<id>") && !text.Contains(",") && !text.Contains("Optional"))
                             {
                                 operand["Name"] = text.GetName();
                                 operand["Type"] = "ID";
                                 operands.Add(operand);
-                                continue;
                             }
-                            if (text.Contains("literal, label <id>"))
+                            else if (text.Contains("literal, label <id>"))
                             {
-                                //TODO
-                                continue;
+                                operand["Name"] = "Target";
+                                operand["Type"] = "Pair<LiteralNumber,ID>[]";
+                                operands.Add(operand);
                             }
                             // For variable count of parameters
-                            if (text.Contains(","))
+                            else if (text.Contains(","))
                             {
                                 var a = text.GetParamsNameAndType();
                                 operand["Name"] = a[0];
                                 operand["Type"] = a[1];
                                 operands.Add(operand);
-                                continue;
                             }
                             // Linked Types
-                            if (td.InnerHtml.Contains("<a href="))
+                            else if (td.InnerHtml.Contains("<a href="))
                             {
                                 var a = text.GetLinkedNameAndType();
                                 operand["Name"] = a[0];
                                 operand["Type"] = a[1];
                                 operands.Add(operand);
                             }
-                            if (text.Contains("Optional"))
-                            {
-                                //TODO
-
+                            // Optionals
+                            else if (text.Contains("Optional"))
+                            {                               
+                                var a = text.GetLinkedNameAndType();
+                                operand["Name"] = a[0];
+                                operand["Type"] = "ID?";
+                                operands.Add(operand);
                             }
-
-
+                            
                         }
-
-                        opJson["WordCount"] = wc;
-                        opJson["WordCountFix"] = int.Parse(wc.Replace(" + variable", "").Trim());
-                        opJson["OpCode"] = opcodeNr;
-
-                        opJson["HasVariableWordCount"] = isVariableWC;
                         opJson["HasResult"] = hasResult;
                         opJson["HasResultType"] = hasResultType;
-
                         opJson["Operands"] = operands;
 
-
-
+                        opcodeJson.Add(opJson);
                     }
 
-                    opcodeJson.Add(opJson);
+                    specJson["OpCodes"] = opcodeJson;
                 }
 
-                specJson["OpCodes"] = opcodeJson;
-            }
-            #endregion
+                #endregion
 
 
                 // Enums
