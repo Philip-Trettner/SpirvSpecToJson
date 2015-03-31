@@ -60,7 +60,9 @@ namespace SpirvSpecToJson
             }
 
             // op code
+
             #region
+
             {
                 var opcodeJson = new JArray();
 
@@ -219,241 +221,260 @@ namespace SpirvSpecToJson
             #endregion
 
 
-            // Enums
-            #region
-            var enumJson = new JArray();
+                // Enums
 
-            Console.WriteLine("Scanning Enums");
+                #region
 
-            foreach (var node in root.SelectNodes("//h3"))
-            {
-                // No empty npdes
-                if (node.Id == "")
-                    continue;
+                // Array of Enums
+                var enumJson = new JArray();
 
-                // Only nodes that starts with "3."
-                if (!node.InnerText.StartsWith("3."))
-                    continue;
+                Console.WriteLine("Scanning Enums");
 
-                // Magic Number and Instructions aren't Enums!
-                if (node.InnerText == "3.1. Magic Number" || node.InnerText == "3.27. Instructions")
-                    continue;
-
-                var parent = node.ParentNode;
-                var table = parent.LastChild.PreviousSibling;
-                var tbody = table.LastChild.PreviousSibling;
-
-                var data = new JObject();
-                var valuesArray = new JArray();
-                
-                data["Name"] = node.InnerText.ToCamelCase();
-
-                // TODO JArray for ExtraOperands!
-
-
-                // Table rows
-                foreach (var tr in tbody.ChildNodes)
+                // Scan for "h3" => Header Type 3
+                foreach (var node in root.SelectNodes("//h3"))
                 {
-                    if (tr.InnerText == "\n")
+                    // No empty npdes
+                    if (node.Id == "")
                         continue;
 
+                    // Only nodes that starts with "3."
+                    if (!node.InnerText.StartsWith("3."))
+                        continue;
 
-                    var valueObj = new JObject();
+                    // Magic Number and Instructions aren't Enums!
+                    if (node.InnerText == "3.1. Magic Number" || node.InnerText == "3.27. Instructions")
+                        continue;
 
-                    var capabilities = new JArray();
-                    var extraOperands = new JArray();
+                    var parent = node.ParentNode;
+                    var table = parent.LastChild.PreviousSibling;
+                    var tbody = table.LastChild.PreviousSibling;
+
+                    // data that needs to be safed
+                    var data = new JObject();
+
+                    // Array of Values
+                    var valuesArray = new JArray();
+
+                    // metadata of Enum
+                    data["Name"] = node.InnerText.ToCamelCase();
 
 
-                    // Enums with values and names only. No Capabilities
-                    if (tr.ChildNodes.Count == 5)
+                    // Scan all rows
+                    foreach (var tr in tbody.ChildNodes)
                     {
-                        foreach (var td in tr.ChildNodes)
+                        // No empty rows
+                        if (tr.InnerText == "\n")
+                            continue;
+
+                        // Elements of Enums
+                        var valueObj = new JObject();
+                        var capabilities = new JArray();
+                        var extraOperands = new JArray();
+
+
+                        // Enums with values and names only. No Capabilities
+                        if (tr.ChildNodes.Count == 5)
                         {
-                            if (td.InnerText == "\n")
-                                continue;
-
-                            // Value Name
-                            if (td.InnerHtml.Contains("<strong>"))
+                            foreach (var td in tr.ChildNodes)
                             {
-                                var innerHtml = td.FirstChild.InnerHtml;
-                                var innerText = td.FirstChild.InnerText;
+                                // no empty content  
+                                if (td.InnerText == "\n")
+                                    continue;
 
-                                var innerOuterHtml = td.FirstChild.FirstChild.OuterHtml;
-                                var innerInnerText = td.FirstChild.FirstChild.InnerText;
-
-
-                                valueObj["Name"] = innerInnerText;
-
-                                //TODO When MultiLine => <br>
-                                valueObj["Comment"] = innerText.Length == innerInnerText.Length
-                                    ? ""
-                                    : innerHtml.Substring(innerOuterHtml.Length + 4).Trim();
-                                valueObj["CommentPlain"] = innerText.Substring(innerInnerText.Length).Trim();
-
-                            }
-                            else
-                            {
-                                // Value
-                                valueObj["Value"] = int.Parse(td.InnerText);
-                            }
-
-
-                        }
-
-                    }
-
-         
-
-                    // Enums with values, names and capabilities
-                    if (tr.ChildNodes.Count == 7)
-                    {
-                        foreach (var td in tr.ChildNodes)
-                        {
-                            if (td.InnerText == "\n")
-                                continue;
-
-                            // Value Name or Capabilities
-                            if (td.InnerHtml.Contains("<strong>"))
-                            {
-                                var innerHtml = td.FirstChild.InnerHtml;
-                                var innerText = td.FirstChild.InnerText;
-
-                                var innerOuterHtml = td.FirstChild.FirstChild.OuterHtml;
-                                var innerInnerText = td.FirstChild.FirstChild.InnerText;
-
-                                // Capabilities
-                                if (td.InnerHtml.Contains("#Cap"))
+                                // Value Name
+                                if (td.InnerHtml.Contains("<strong>"))
                                 {
-                                    capabilities.Add(innerInnerText);
-                                    var secondCap = innerText.Length == innerInnerText.Length
+                                    var innerHtml = td.FirstChild.InnerHtml;
+                                    var innerText = td.FirstChild.InnerText;
+
+                                    var innerOuterHtml = td.FirstChild.FirstChild.OuterHtml;
+                                    var innerInnerText = td.FirstChild.FirstChild.InnerText;
+
+
+                                    valueObj["Name"] = innerInnerText;
+
+                                    valueObj["Comment"] = innerText.Length == innerInnerText.Length
                                         ? ""
-                                        : innerText.Substring(innerInnerText.Length + 1);
-                                    if(!string.IsNullOrEmpty(secondCap))
-                                        capabilities.Add(secondCap);
+                                        : innerHtml.Substring(innerOuterHtml.Length + 4)
+                                            .Trim()
+                                            .Replace("<br>", "<br />");
+                                    valueObj["CommentPlain"] = innerText.Substring(innerInnerText.Length).Trim();
+
                                 }
                                 else
                                 {
-                                    valueObj["Name"] = innerInnerText;
-
-                                    //TODO When MultiLine => <br>
-                                    valueObj["Comment"] = innerText.Length == innerInnerText.Length
-                                        ? ""
-                                        : innerHtml.Substring(innerOuterHtml.Length + 4).Trim();
-                                    valueObj["CommentPlain"] = innerText.Substring(innerInnerText.Length).Trim();
-                                }
-
-                            }
-                            else
-                            {
-                                // Value
-                                if (!string.IsNullOrEmpty(td.InnerText))
+                                    // Value
                                     valueObj["Value"] = int.Parse(td.InnerText);
-                            }
+                                }
 
+
+                            }
 
                         }
 
-                    }
 
-                    //TODO 
-                    //Enums with values, names, capabilites and extra operands
-                    if (tr.ChildNodes.Count > 8)
-                    {
-                        foreach (var td in tr.ChildNodes)
+
+                        // Enums with values, names and capabilities
+                        if (tr.ChildNodes.Count == 7)
                         {
-                            if (td.InnerText == "\n")
-                                continue;
-
-                            // Value Name, Capabilities or Extra Operands
-                            if (td.InnerHtml.Contains("<strong>"))
+                            foreach (var td in tr.ChildNodes)
                             {
-                                var innerHtml = td.FirstChild.InnerHtml;
-                                var innerText = td.FirstChild.InnerText;
+                                // No empty content
+                                if (td.InnerText == "\n")
+                                    continue;
 
-                                var innerOuterHtml = td.FirstChild.FirstChild.OuterHtml;
-                                var innerInnerText = td.FirstChild.FirstChild.InnerText;
-
-                                // Capabilities
-                                if (td.InnerHtml.Contains("#Cap"))
+                                // Value Name or Capabilities
+                                if (td.InnerHtml.Contains("<strong>"))
                                 {
-                                    capabilities.Add(innerInnerText);
-                                    var secondCap = innerText.Length == innerInnerText.Length
-                                        ? ""
-                                        : innerText.Substring(innerInnerText.Length + 1);
-                                    if (!string.IsNullOrEmpty(secondCap))
-                                        capabilities.Add(secondCap);
-                                }
-                                else
-                                {
-                                    valueObj["Name"] = innerInnerText;
+                                    var innerHtml = td.FirstChild.InnerHtml;
+                                    var innerText = td.FirstChild.InnerText;
 
-                                    //TODO When MultiLine => <br>
-                                    valueObj["Comment"] = innerText.Length == innerInnerText.Length
-                                        ? ""
-                                        : innerHtml.Substring(innerOuterHtml.Length + 4).Trim();
-                                    valueObj["CommentPlain"] = innerText.Substring(innerInnerText.Length).Trim();
-                                }
+                                    var innerOuterHtml = td.FirstChild.FirstChild.OuterHtml;
+                                    var innerInnerText = td.FirstChild.FirstChild.InnerText;
 
-                            }
-                            else
-                            {
-                                int val;
-                                // Value
-                                if (int.TryParse(td.InnerText, out val))
-                                    valueObj["Value"] = val;
-                                else
-                                {
-                                    if (!String.IsNullOrEmpty(td.InnerText))
+                                    // Capabilities
+                                    if (td.InnerHtml.Contains("#Cap"))
                                     {
-                                        // Extra Operands
-                                        var innerHtml = td.FirstChild.InnerHtml;
-                                        var innerText = td.FirstChild.InnerText;
-                                        var innerOuterHtml = td.FirstChild.FirstChild.OuterHtml;
-                                        var innerInnerText = td.FirstChild.FirstChild.InnerText;
-
-                                        var extraOperand = new JObject();
-                                        extraOperand["Type"] = innerInnerText.ToCamelCase();
-                                        extraOperand["Comment"] = innerInnerText == innerText
+                                        capabilities.Add(innerInnerText);
+                                        var secondCap = innerText.Length == innerInnerText.Length
                                             ? ""
                                             : innerText.Substring(innerInnerText.Length + 1);
-
-
-                                        extraOperands.Add(extraOperand);
-
+                                        if (!string.IsNullOrEmpty(secondCap))
+                                            capabilities.Add(secondCap);
                                     }
+                                    else
+                                    {
+                                        valueObj["Name"] = innerInnerText;
+
+                                        valueObj["Comment"] = innerText.Length == innerInnerText.Length
+                                            ? ""
+                                            : innerHtml.Substring(innerOuterHtml.Length + 4)
+                                                .Trim()
+                                                .Replace("<br>", "<br />");
+                                        valueObj["CommentPlain"] = innerText.Substring(innerInnerText.Length).Trim();
+                                    }
+
                                 }
+                                else
+                                {
+                                    // Value
+                                    if (!string.IsNullOrEmpty(td.InnerText))
+                                        valueObj["Value"] = int.Parse(td.InnerText);
+                                }
+
 
                             }
 
+                        }
+
+
+                        //Enums with values, names, capabilites and extra operands
+                        if (tr.ChildNodes.Count > 8)
+                        {
+                            foreach (var td in tr.ChildNodes)
+                            {
+                                // No empty content
+                                if (td.InnerText == "\n")
+                                    continue;
+
+                                // Value Name, Capabilities or Extra Operands
+                                if (td.InnerHtml.Contains("<strong>"))
+                                {
+                                    var innerHtml = td.FirstChild.InnerHtml;
+                                    var innerText = td.FirstChild.InnerText;
+
+                                    var innerOuterHtml = td.FirstChild.FirstChild.OuterHtml;
+                                    var innerInnerText = td.FirstChild.FirstChild.InnerText;
+
+                                    // Capabilities
+                                    if (td.InnerHtml.Contains("#Cap"))
+                                    {
+                                        capabilities.Add(innerInnerText);
+                                        var secondCap = innerText.Length == innerInnerText.Length
+                                            ? ""
+                                            : innerText.Substring(innerInnerText.Length + 1);
+                                        if (!string.IsNullOrEmpty(secondCap))
+                                            capabilities.Add(secondCap);
+                                    }
+                                    else
+                                    {
+                                        valueObj["Name"] = innerInnerText;
+
+
+                                        valueObj["Comment"] = innerText.Length == innerInnerText.Length
+                                            ? ""
+                                            : innerHtml.Substring(innerOuterHtml.Length + 4)
+                                                .Trim()
+                                                .Replace("<br>", "<br />");
+                                        valueObj["CommentPlain"] = innerText.Substring(innerInnerText.Length).Trim();
+                                    }
+
+                                }
+                                else
+                                {
+                                    int val;
+                                    // Value
+                                    if (int.TryParse(td.InnerText, out val))
+                                        valueObj["Value"] = val;
+                                    else
+                                    {
+                                        if (!String.IsNullOrEmpty(td.InnerText))
+                                        {
+                                            // Extra Operands                                       
+                                            var innerText = td.FirstChild.InnerText.Trim();
+                                            var innerInnerText = td.FirstChild.FirstChild.InnerText.Trim();
+
+                                            var extraOperand = new JObject();
+
+                                            extraOperand["Type"] = innerInnerText.ToCamelCase();
+                                            extraOperand["Comment"] = innerInnerText == innerText
+                                                ? ""
+                                                : innerText.Substring(innerInnerText.Length + 1)
+                                                    .Trim()
+                                                    .Replace("<br>", "<br />");
+
+                                            extraOperands.Add(extraOperand);
+
+                                        }
+                                    }
+
+                                }
+
+
+                            }
 
                         }
 
+
+
+                        // Add Capabilites and ExtraOperands
+                        valueObj["Capabilities"] = capabilities;
+                        valueObj["ExtraOperands"] = extraOperands;
+
+                        // Add Values
+                        valuesArray.Add(valueObj);
                     }
 
-                    valueObj["Capabilities"] = capabilities;
-                    valueObj["ExtraOperands"] = extraOperands;
-                    valuesArray.Add(valueObj);
+
+                    data["Values"] = valuesArray;
+
+                    data["Comment"] = node.NextSibling.NextSibling.FirstChild.InnerHtml.Replace("<br>", "<br />");
+                    data["CommentPlain"] = node.NextSibling.NextSibling.InnerText;
+
+
+                    enumJson.Add(data);
+
+                    specJson["Enums"] = enumJson;
+
                 }
 
+                #endregion
 
-                data["Values"] = valuesArray;
-
-                data["Comment"] = node.NextSibling.NextSibling.FirstChild.InnerHtml;
-                data["CommentPlain"] = node.NextSibling.NextSibling.InnerText;
-
-
-                enumJson.Add(data);
-
-                specJson["Enums"] = enumJson;
-
+                // save json
+                Console.WriteLine("Writing result json");
+                File.WriteAllText(jsonFile, specJson.ToString(Formatting.Indented));
             }
-            #endregion
 
-            // save json
-            Console.WriteLine("Writing result json");
-            File.WriteAllText(jsonFile, specJson.ToString(Formatting.Indented));
         }
-
     }
-
 }
