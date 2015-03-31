@@ -301,7 +301,10 @@ namespace SpirvSpecToJson
                         valuesArray.Add(valueObj);
                     }
 
-                    //TODO
+                    var capArray = new JArray();
+
+                    //TODO Filtering more than one Capability
+
                     // Enums with values, names and capabilities
                     if (tr.ChildNodes.Count == 7)
                     {
@@ -313,17 +316,38 @@ namespace SpirvSpecToJson
                             // Value Name
                             if (td.InnerHtml.Contains("<strong>"))
                             {
-                                if (td.ParentNode.InnerHtml.Contains("a href"))
-                                    valueObj["Name"] = td.InnerText;
+                                var innerHtml = td.FirstChild.InnerHtml;
+                                var innerText = td.FirstChild.InnerText;
+
+                                var innerOuterHtml = td.FirstChild.FirstChild.OuterHtml;
+                                var innerInnerText = td.FirstChild.FirstChild.InnerText;
+
+                                if (td.InnerHtml.Contains("Cap"))
+                                {
+                                    capArray.Add(innerInnerText);
+                                }
+                                else
+                                {
+                                    valueObj["Name"] = innerInnerText;
+
+                                    //TODO When MultiLine => <br>
+                                    valueObj["Comment"] = innerText.Length == innerInnerText.Length
+                                        ? ""
+                                        : innerHtml.Substring(innerOuterHtml.Length + 4).Trim();
+                                    valueObj["CommentPlain"] = innerText.Substring(innerInnerText.Length).Trim();
+                                }
+
                             }
                             else
                             {
                                 // Value
-                                valueObj["Value"] = td.InnerText;
+                                if (!string.IsNullOrEmpty(td.InnerText))
+                                    valueObj["Value"] = int.Parse(td.InnerText);
                             }
 
 
                         }
+                        valueObj["Capabilities"] = capArray;
                         valuesArray.Add(valueObj);
                     }
 
