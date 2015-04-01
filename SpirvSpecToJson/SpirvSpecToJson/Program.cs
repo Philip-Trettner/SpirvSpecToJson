@@ -202,7 +202,7 @@ namespace SpirvSpecToJson
                             else if (td.InnerHtml.Contains("<a href="))
                             {
                                 var a = text.GetLinkedNameAndType();
-                                operand["Name"] = a[0];
+                                operand["Name"] = a[0].Replace(".","");
                                 operand["Type"] = a[1];
                                 operands.Add(operand);
                             }
