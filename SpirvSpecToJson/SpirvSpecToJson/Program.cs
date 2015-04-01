@@ -179,7 +179,8 @@ namespace SpirvSpecToJson
                             // Type: ID
                             else if (text.Contains("<id>") && !text.Contains(",") && !text.Contains("Optional"))
                             {
-                                operand["Name"] = text.GetName();
+                                // Empty name => to "Object"
+                                operand["Name"] = text.GetName() == "" ? "Object" : text.GetName();
                                 operand["Type"] = "ID";
                                 operands.Add(operand);
                             }
@@ -209,7 +210,7 @@ namespace SpirvSpecToJson
                             else if (text.Contains("Optional"))
                             {
                                 var a = text.GetLinkedNameAndType();
-                                operand["Name"] = a[0];
+                                operand["Name"] = a[0] == "[Bias]" ? "Bias" : a[0];
                                 operand["Type"] = "ID?";
                                 operands.Add(operand);
                             }
