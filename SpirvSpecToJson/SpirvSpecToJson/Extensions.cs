@@ -59,7 +59,7 @@ namespace SpirvSpecToJson
                 a[1] = "ID[]";
             }
 
-            if (text.Contains("literal"))
+            else if (text.Contains("literal"))
             {
                 // Format:
                 //
@@ -83,7 +83,6 @@ namespace SpirvSpecToJson
 
             }
 
-
             return a;
 
         }
@@ -105,12 +104,16 @@ namespace SpirvSpecToJson
                 {
                     a[0] = text.Replace("<id>", "").Trim();
                     a[1] = "ID";
-
+                }
+                else if (text.Contains("Literal Number"))
+                {
+                    a[0] = "Number";
+                    a[1] = "LiteralNumber";
                 }
                 else
                 {
                     a[0] = text.ToCamelCase();
-                    a[1] = "Enum";
+                    a[1] = text.ToCamelCase();
                 }
             }
             else
