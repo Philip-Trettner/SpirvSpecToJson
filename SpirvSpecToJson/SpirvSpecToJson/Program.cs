@@ -230,11 +230,10 @@ namespace SpirvSpecToJson
 
             #region Enums
 
-            // Array of Enums
+           
             {
-
+                // Array of Enums
                 var enumJson = new JArray();
-
 
                 Console.WriteLine("Scanning Enums");
 
@@ -263,9 +262,14 @@ namespace SpirvSpecToJson
                     // Array of Values
                     var valuesArray = new JArray();
 
-                    // metadata of Enum
-                    data["Name"] = node.InnerText.ToCamelCase();
+                    // name of Enum
+                    {
+                        var name = node.InnerText;
 
+                        name = name.Substring(name.IndexOf(' '));
+
+                        data["Name"] = name.Trim().ToCamelCase();
+                    }
 
                     // Scan all rows
                     foreach (var tr in tbody.ChildNodes)
