@@ -108,8 +108,8 @@ namespace SpirvSpecToJson
                         category = category.Replace("Instructions", "");
                         category = category.Replace("(Removable)", "");
                         category = category.Substring(category.IndexOf(' '));
-
-                        opJson["Category"] = category.Trim();
+                        
+                        opJson["Category"] = category.Trim().ToCamelCase();
                     }
                     var tr = node.ParentNode.ParentNode.ParentNode;
                     Debug.Assert(tr.Name == "tr");
