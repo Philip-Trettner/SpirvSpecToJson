@@ -261,7 +261,7 @@ namespace SpirvSpecToJson
                 #endregion
 
                 #region Enums
-                
+
                 {
                     // Array of Enums
                     var enumJson = new JArray();
@@ -404,7 +404,7 @@ namespace SpirvSpecToJson
                                         if (!string.IsNullOrEmpty(td.InnerText))
                                             valueObj["Value"] = int.Parse(td.InnerText);
                                     }
-                                    
+
                                 }
 
                             }
@@ -441,7 +441,7 @@ namespace SpirvSpecToJson
                                         else
                                         {
                                             valueObj["Name"] = innerInnerText;
-                                            
+
                                             valueObj["Comment"] = innerText.Length == innerInnerText.Length
                                                 ? ""
                                                 : innerHtml.Substring(innerOuterHtml.Length + 4)
@@ -512,7 +512,7 @@ namespace SpirvSpecToJson
                 }
 
                 #endregion
- 
+
             }
 
             #endregion
@@ -536,9 +536,9 @@ namespace SpirvSpecToJson
                     var docExt = new HtmlDocument();
                     docExt.LoadHtml(htmlExt);
                     var rootExt = docExt.DocumentNode;
-                    
+
                     var extGLSL = new JObject();
-                    
+
                     // Metadata
                     {
                         var metaData = new JObject();
@@ -549,14 +549,14 @@ namespace SpirvSpecToJson
                         metaData["Author"] = rootExt.SelectSingleNode("//span[@id='author']").InnerText;
                         metaData["Revnumber"] = rootExt.SelectSingleNode("//span[@id='revnumber']").InnerText;
                         metaData["LastUpdate"] = rootExt.SelectSingleNode("//div[@id='footer-text']").LastChild.InnerText.Trim();
-                        
+
                         extGLSL["Metadata"] = metaData;
                     }
-                    
+
                     // Extended Instructions
                     {
                         var extendedInstructions = new JArray();
-                        
+
                         foreach (var tbody in rootExt.SelectNodes("//tbody"))
                         {
                             var extInst = new JObject();
@@ -583,11 +583,11 @@ namespace SpirvSpecToJson
                             extInst["DescriptionPlain"] = td.FirstChild.InnerText.Substring(name.Length).Trim();
 
                             extendedInstructions.Add(extInst);
-                            
+
                             // Number and Params
                             {
                                 var row = tbody.LastChild.PreviousSibling;
-                                
+
                                 var operands = new JArray();
 
                                 foreach (var column in row.ChildNodes)
@@ -608,7 +608,7 @@ namespace SpirvSpecToJson
                                         operand["Name"] = WebUtility.HtmlDecode(column.InnerText).GetName(false);
                                         operand["Type"] = "ID";
                                         operands.Add(operand);
-                                    }                                        
+                                    }
                                 }
 
                                 extInst["Operands"] = operands;
@@ -620,9 +620,9 @@ namespace SpirvSpecToJson
                     }
 
                     extJson.Add(extGLSL);
-                
+
                 }
-                
+
                 #endregion
 
                 #region CL12
@@ -644,7 +644,7 @@ namespace SpirvSpecToJson
                     // Metadata
                     {
                         var metaData = new JObject();
-                        
+
                         metaData["Language"] = "Open CL";
                         metaData["Version"] = 1.2;
                         metaData["Title"] = rootExt.SelectSingleNode("//div[@id='header']/h1").InnerText;
@@ -654,7 +654,7 @@ namespace SpirvSpecToJson
 
                         extCL12["Metadata"] = metaData;
                     }
-                    
+
                     // Extended Instructions
                     {
                         var extendedInstructions = new JArray();
@@ -663,69 +663,95 @@ namespace SpirvSpecToJson
                         {
                             var extInst = new JObject();
 
-                            // Table "Extended Instruction Name" hasn't extended instructions
-                            if (tbody.InnerText.Contains("Extended Instruction Name"))
-                                continue;
-
                             var tr = tbody.FirstChild.NextSibling;
                             var td = tr.FirstChild.NextSibling;
-                            var name = td.FirstChild.FirstChild.InnerText;
-                            var innerHtml = td.FirstChild.InnerHtml;
+
+                            //TODO
+                            // Enums
+                            if (tbody.ParentNode.ParentNode.FirstChild.NextSibling.Id ==
+                                "_a_id_imageformatenc_a_image_format_encoding")
+                                continue;
+
+                            var name = td.FirstChild.FirstChild.NextSibling.InnerText;
 
                             extInst["Name"] = name.ToCamelCase();
                             extInst["OriginalName"] = name;
 
                             // Description
-                            var desc = innerHtml == name ? "" : innerHtml.Substring(name.Length + "<strong></strong>".Length).Trim().Replace("<br>", "<br />");
-
-                            if (desc.StartsWith("<br />\n<br />\n"))
-                                desc = desc.Substring("<br />\n<br />\n".Length);
-
-                            extInst["Description"] = desc;
-                            extInst["DescriptionPlain"] = td.FirstChild.InnerText.Substring(name.Length).Trim();
-
-                            extendedInstructions.Add(extInst);
-
-                            // TODO: Category
                             {
+                                var comment = new StringBuilder();
+                                var commentPlain = new StringBuilder();
 
+                                foreach (var commentBlock in td.ChildNodes)
+                                {
+                                    comment.Append(commentBlock.InnerHtml);
+                                    commentPlain.Append(commentBlock.InnerText);
+                                }
+
+                                var comInnerHtml = comment.ToString();
+                                var comInnerText = commentPlain.ToString();
+
+                                comInnerHtml = comInnerHtml == name
+                                    ? ""
+                                    : comInnerHtml.Substring(2*name.Length +
+                                                             "<a id=\"acos\"></a><strong></strong>".Length)
+                                        .Trim()
+                                        .Replace("<br>", "<br />");
+
+                                if (comInnerHtml.StartsWith("<br />\n"))
+                                    comInnerHtml = comInnerHtml.Substring("<br />\n".Length);
+                                if (comInnerHtml.EndsWith("\n<br />"))
+                                    comInnerHtml = comInnerHtml.Remove(comInnerHtml.Length - "\n<br />".Length);
+                                if (comInnerText.StartsWith(name + "\n\n"))
+                                    comInnerText = comInnerText.Substring(name.Length + "\n\n".Length);
+                                if (comInnerText.EndsWith("\n"))
+                                    comInnerText = comInnerText.Remove(comInnerText.Length - "\n".Length);
+
+                                extInst["Description"] = comInnerHtml;
+                                extInst["DescriptionPlain"] = comInnerText;
                             }
 
-                            // TODO: WordCount
                             
+                            // TODO: Category
+                            {
+                                var cat = tbody.ParentNode.ParentNode.FirstChild.NextSibling.InnerText;
+                                cat = cat.Substring(cat.IndexOf(" ")).Trim().ToCamelCase();    
+                                extInst["Category"] = cat;
+                            }
 
                             // Number and Params
                             {
                                 var row = tbody.LastChild.PreviousSibling;
 
                                 var operands = new JArray();
+                                
+                                for (int i = 11; i < row.ChildNodes.Count; i++)
+                                {
+                                    var column = row.ChildNodes[i];
+                                    int nr;
+                                    var operand = new JObject();
 
-                                //TODO
+                                    // No empty content
+                                    if (column.InnerText == "" || column.InnerText == "\n")
+                                        continue;
 
-                                //foreach (var column in row.ChildNodes)
-                                //{
-                                //    int nr;
-                                //    var operand = new JObject();
-
-                                //    // No empty content
-                                //    if (column.InnerText == "" || column.InnerText == "\n")
-                                //        continue;
-
-                                //    // Number
-                                //    else if (int.TryParse(column.InnerText, out nr))
-                                //        extInst["Number"] = nr;
-                                //    // Operands
-                                //    else
-                                //    {
-                                //        operand["Name"] = WebUtility.HtmlDecode(column.InnerText).GetName();
-                                //        operand["Tpe"] = "ID";
-                                //        operands.Add(operand);
-                                //    }
-                                //}
+                                    // Number
+                                    else if (int.TryParse(column.InnerText, out nr))
+                                        extInst["Number"] = nr;
+                                    // Operands
+                                    else
+                                    {
+                                        operand["Name"] = WebUtility.HtmlDecode(column.InnerText).GetName(false);
+                                        operand["Tpe"] = "ID";
+                                        operands.Add(operand);
+                                    }
+                                }
 
                                 extInst["Operands"] = operands;
                             }
-                            
+
+                            extendedInstructions.Add(extInst);
+
                         }
 
                         extCL12["ExtendedInstructions"] = extendedInstructions;
