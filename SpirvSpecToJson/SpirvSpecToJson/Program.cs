@@ -18,19 +18,43 @@ namespace SpirvSpecToJson
         private static void Main(string[] args)
         {
             const string specUrl = @"https://www.khronos.org/registry/spir-v/specs/1.0/SPIRV.html";
+            const string specExtUrlGLSL = @"https://www.khronos.org/registry/spir-v/specs/1.0/GLSL.std.450.html";
+            const string specExtUrlOpenCL12 = @"https://www.khronos.org/registry/spir-v/specs/1.0/OpenCL.std.12.html";
+            const string specExtUrlOpenCL20 = @"https://www.khronos.org/registry/spir-v/specs/1.0/OpenCL.std.20.html";
+            const string specExtUrlOpenCL21 = @"https://www.khronos.org/registry/spir-v/specs/1.0/OpenCL.std.21.html";
             const string cacheFile = "spirv.html";
+            const string cacheFileExtGLSL = "spirvExtGLSL.html";
+            const string cacheFileExtOpenCL12 = "spirvExtOpenCL12.html";
+            const string cacheFileExtOpenCL20 = "spirvExtOpenCL20.html";
+            const string cacheFileExtOpenCL21 = "spirvExtOpenCL21.html";
             const string jsonFile = "spirv.json";
 
+
+            var dic = new Dictionary<string, string>
+            {
+                {specUrl, cacheFile},
+                {specExtUrlGLSL, cacheFileExtGLSL},
+                {specExtUrlOpenCL12, cacheFileExtOpenCL12},
+                {specExtUrlOpenCL20, cacheFileExtOpenCL20},
+                {specExtUrlOpenCL21, cacheFileExtOpenCL21}
+            };
+
             // download on demand
-            if (!File.Exists(cacheFile))
+            //TODO: Only download what needed
+            if (!File.Exists(cacheFile) || !File.Exists(cacheFileExtGLSL) || !File.Exists(cacheFileExtOpenCL12) || !File.Exists(cacheFileExtOpenCL20) || !File.Exists(cacheFileExtOpenCL21))
             {
                 Console.WriteLine("Spec not found, downloading.");
                 var htmlClient = new HttpClient();
 
-                Console.WriteLine("Downloading " + specUrl);
-                var task = htmlClient.GetStringAsync(specUrl);
-                task.Wait();
-                File.WriteAllText(cacheFile, task.Result);
+                foreach (var t in dic)
+                {
+                    Console.WriteLine("Downloading " + t.Key);
+                    var task = htmlClient.GetStringAsync(t.Key);
+                    task.Wait();
+                    File.WriteAllText(t.Value, task.Result);
+
+                }
+
                 Console.WriteLine("Finished.");
             }
 
