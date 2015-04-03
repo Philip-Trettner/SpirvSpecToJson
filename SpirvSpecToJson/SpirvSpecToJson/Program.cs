@@ -195,7 +195,7 @@ namespace SpirvSpecToJson
                                 if (text == "Result <id>")
                                 {
                                     hasResult = true;
-                                    operand["Name"] = text.GetName();
+                                    operand["Name"] = text.GetName(true);
                                     operand["Type"] = "ID";
                                     operands.Add(operand);
                                 }
@@ -203,7 +203,7 @@ namespace SpirvSpecToJson
                                 else if (text == "<id>\nResult Type")
                                 {
                                     hasResultType = true;
-                                    operand["Name"] = text.GetName();
+                                    operand["Name"] = text.GetName(true);
                                     operand["Type"] = "ID";
                                     operands.Add(operand);
                                 }
@@ -211,7 +211,7 @@ namespace SpirvSpecToJson
                                 else if (text.Contains("<id>") && !text.Contains(",") && !text.Contains("Optional"))
                                 {
                                     // Empty name => to "Object"
-                                    operand["Name"] = text.GetName() == "" ? "Object" : text.GetName();
+                                    operand["Name"] = text.GetName(true) == "" ? "Object" : text.GetName(true);
                                     operand["Type"] = "ID";
                                     operands.Add(operand);
                                 }
@@ -543,6 +543,8 @@ namespace SpirvSpecToJson
                     {
                         var metaData = new JObject();
 
+                        metaData["Language"] = "GLSL";
+                        metaData["Version"] = 450;
                         metaData["Title"] = rootExt.SelectSingleNode("//div[@id='header']/h1").InnerText;
                         metaData["Author"] = rootExt.SelectSingleNode("//span[@id='author']").InnerText;
                         metaData["Revnumber"] = rootExt.SelectSingleNode("//span[@id='revnumber']").InnerText;
@@ -569,9 +571,9 @@ namespace SpirvSpecToJson
                             var innerHtml = td.FirstChild.InnerHtml;
 
                             extInst["Name"] = name.ToCamelCase();
+                            extInst["OriginalName"] = name;
 
                             // Description
-
                             var desc = innerHtml == name ? "" : innerHtml.Substring(name.Length + "<strong></strong>".Length).Trim().Replace("<br>", "<br />");
 
                             if (desc.StartsWith("<br />\n<br />\n"))
@@ -603,23 +605,22 @@ namespace SpirvSpecToJson
                                     // Operands
                                     else
                                     {
-                                        operand["Name"] = WebUtility.HtmlDecode(column.InnerText).GetName();
-                                        operand["Tpe"] = "ID";
+                                        operand["Name"] = WebUtility.HtmlDecode(column.InnerText).GetName(false);
+                                        operand["Type"] = "ID";
                                         operands.Add(operand);
                                     }                                        
                                 }
 
                                 extInst["Operands"] = operands;
                             }
-                            
-                           
+
                         }
 
                         extGLSL["ExtendedInstructions"] = extendedInstructions;
                     }
 
                     extJson.Add(extGLSL);
-                 
+                
                 }
                 
                 #endregion
@@ -643,7 +644,9 @@ namespace SpirvSpecToJson
                     // Metadata
                     {
                         var metaData = new JObject();
-
+                        
+                        metaData["Language"] = "Open CL";
+                        metaData["Version"] = 1.2;
                         metaData["Title"] = rootExt.SelectSingleNode("//div[@id='header']/h1").InnerText;
                         metaData["Author"] = rootExt.SelectSingleNode("//span[@id='author']").InnerText;
                         metaData["Revnumber"] = rootExt.SelectSingleNode("//span[@id='revnumber']").InnerText;
@@ -670,6 +673,7 @@ namespace SpirvSpecToJson
                             var innerHtml = td.FirstChild.InnerHtml;
 
                             extInst["Name"] = name.ToCamelCase();
+                            extInst["OriginalName"] = name;
 
                             // Description
                             var desc = innerHtml == name ? "" : innerHtml.Substring(name.Length + "<strong></strong>".Length).Trim().Replace("<br>", "<br />");
