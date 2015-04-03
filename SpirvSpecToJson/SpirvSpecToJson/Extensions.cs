@@ -13,8 +13,9 @@ namespace SpirvSpecToJson
         /// Get the name of an operand with the type ID
         /// </summary>
         /// <param name="text"></param>
+        /// <param name="camelCase"></param>
         /// <returns>name of operand</returns>
-        public static string GetName( this string text)
+        public static string GetName( this string text, bool camelCase)
         {
             // 2 Cases:
             //
@@ -22,8 +23,10 @@ namespace SpirvSpecToJson
             // Name <id>
 
             // Returns just the name
-            return text.Replace("<id>", "").Trim().ToCamelCase();
-
+            if (camelCase)
+                return text.Replace("<id>", "").Trim().ToCamelCase();
+            else
+                return text.Replace("<id>", "").Trim();
         }
         /// <summary>
         /// Get the Name of the operand list with the type ID.
