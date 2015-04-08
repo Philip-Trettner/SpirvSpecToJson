@@ -232,7 +232,7 @@ namespace SpirvSpecToJson
                                 // Linked Types
                                 else if (td.InnerHtml.Contains("<a href="))
                                 {
-                                    var a = text.GetLinkedNameAndType();
+                                    var a = text.GetLinkedNameAndType(true, true);
                                     operand["Name"] = a[0].Replace(".", "");
                                     operand["Type"] = a[1];
                                     operands.Add(operand);
@@ -240,7 +240,7 @@ namespace SpirvSpecToJson
                                 // Optionals
                                 else if (text.Contains("Optional"))
                                 {
-                                    var a = text.GetLinkedNameAndType();
+                                    var a = text.GetLinkedNameAndType(true, true);
                                     operand["Name"] = a[0] == "[Bias]" ? "Bias" : a[0];
                                     operand["Type"] = "ID?";
                                     operands.Add(operand);
@@ -258,7 +258,7 @@ namespace SpirvSpecToJson
                     }
                 }
 
-                #endregion
+                #endregion  
 
                 #region Enums
 
@@ -666,11 +666,16 @@ namespace SpirvSpecToJson
                             var tr = tbody.FirstChild.NextSibling;
                             var td = tr.FirstChild.NextSibling;
 
-                            //TODO
-                            // Enums
-                            if (tbody.ParentNode.ParentNode.FirstChild.NextSibling.Id ==
-                                "_a_id_imageformatenc_a_image_format_encoding")
-                                continue;
+
+                            // Enums => ignore
+                            {
+
+                                if (tbody.ParentNode.ParentNode.FirstChild.NextSibling.Id ==
+                                    "_a_id_imageformatenc_a_image_format_encoding")
+                                {
+                                    continue;
+                                }
+                            }
 
                             var name = td.FirstChild.FirstChild.NextSibling.InnerText;
 
@@ -682,6 +687,7 @@ namespace SpirvSpecToJson
                                 var comment = new StringBuilder();
                                 var commentPlain = new StringBuilder();
 
+                                // The complete comment is written in different rows => get all
                                 foreach (var commentBlock in td.ChildNodes)
                                 {
                                     comment.Append(commentBlock.InnerHtml);
@@ -691,13 +697,15 @@ namespace SpirvSpecToJson
                                 var comInnerHtml = comment.ToString();
                                 var comInnerText = commentPlain.ToString();
 
+                                // Replace <br> to <br />
                                 comInnerHtml = comInnerHtml == name
                                     ? ""
-                                    : comInnerHtml.Substring(2*name.Length +
+                                    : comInnerHtml.Substring(2 * name.Length +
                                                              "<a id=\"acos\"></a><strong></strong>".Length)
                                         .Trim()
                                         .Replace("<br>", "<br />");
 
+                                // Delete "/n" or "<br /> at beginning and at the end
                                 if (comInnerHtml.StartsWith("<br />\n"))
                                     comInnerHtml = comInnerHtml.Substring("<br />\n".Length);
                                 if (comInnerHtml.EndsWith("\n<br />"))
@@ -711,11 +719,11 @@ namespace SpirvSpecToJson
                                 extInst["DescriptionPlain"] = comInnerText;
                             }
 
-                            
-                            // TODO: Category
+
+                            // Category
+                            var cat = tbody.ParentNode.ParentNode.FirstChild.NextSibling.InnerText;
                             {
-                                var cat = tbody.ParentNode.ParentNode.FirstChild.NextSibling.InnerText;
-                                cat = cat.Substring(cat.IndexOf(" ")).Trim().ToCamelCase();    
+                                cat = cat.Substring(cat.IndexOf(" ")).Trim().ToCamelCase();
                                 extInst["Category"] = cat;
                             }
 
@@ -724,7 +732,13 @@ namespace SpirvSpecToJson
                                 var row = tbody.LastChild.PreviousSibling;
 
                                 var operands = new JArray();
-                                
+
+                                //TODO: implement ImageEncoding
+                                if (cat == "ImageEncoding" || cat == "SamplerEncoding")
+                                    continue;
+
+                                // Start at 6th column (Number)
+                                // After Number there are only params
                                 for (int i = 11; i < row.ChildNodes.Count; i++)
                                 {
                                     var column = row.ChildNodes[i];
@@ -741,9 +755,27 @@ namespace SpirvSpecToJson
                                     // Operands
                                     else
                                     {
-                                        operand["Name"] = WebUtility.HtmlDecode(column.InnerText).GetName(false);
-                                        operand["Tpe"] = "ID";
-                                        operands.Add(operand);
+                                        // LiteralNumber
+                                        if (column.InnerText.Contains("Literal Number"))
+                                        {
+                                            var a = column.InnerText.GetLinkedNameAndType(false, true);
+                                            operand["Name"] = a[0];
+                                            operand["Type"] = a[1];
+                                            operands.Add(operand);
+                                        }
+                                        // printf -> addionalArguemnts as ID Array
+                                        else if (column.InnerText.StartsWith("&lt;id&gt;, &lt;id&gt;,"))
+                                        {
+                                            operand["Name"] = "AdditionalArguments";
+                                            operand["Type"] = "ID[]";
+                                        }
+                                        // IDs
+                                        else
+                                        {
+                                            operand["Name"] = WebUtility.HtmlDecode(column.InnerText).GetName(false);
+                                            operand["Tpe"] = "ID";
+                                            operands.Add(operand);
+                                        }
                                     }
                                 }
 
@@ -753,11 +785,475 @@ namespace SpirvSpecToJson
                             extendedInstructions.Add(extInst);
 
                         }
-
                         extCL12["ExtendedInstructions"] = extendedInstructions;
                     }
 
+                    // Enums
+                    {
+                        var enums = new JArray();
+
+                        foreach (var tbody in rootExt.SelectNodes("//tbody"))
+                        {
+                            var enu = new JObject();
+
+                            // Enums ID
+                            if (tbody.ParentNode.ParentNode.FirstChild.NextSibling.Id ==
+                                "_a_id_imageformatenc_a_image_format_encoding")
+                            {
+                                var values = new JArray();
+
+                                Debug.Assert(tbody.ParentNode.ChildNodes.Count > 5);
+
+                                enu["Name"] = tbody.ParentNode.ChildNodes[5].InnerText.Trim();
+
+                                // Values
+                                foreach (var tr in tbody.ChildNodes)
+                                {
+                                    var val = new JObject();
+                                    if (tr.Name == "tr")
+                                    {
+                                        Debug.Assert(tr.ChildNodes.Count > 3);
+
+                                        val["Value"] = int.Parse(tr.ChildNodes[1].InnerText);
+                                        val["Name"] = tr.ChildNodes[3].InnerText;
+
+                                        values.Add(val);
+                                    }
+                                }
+
+                                enu["Values"] = values;
+
+                                enums.Add(enu);
+
+                            }
+                        }
+
+                        extCL12["Enums"] = enums;
+                    }
+
                     extJson.Add(extCL12);
+
+                }
+
+                #endregion
+
+                #region CL20
+                {
+                    // Load File
+
+                    // cached spec
+                    Console.WriteLine("Read HTML from " + cacheFileExtOpenCL20);
+                    var htmlExt = File.ReadAllText(cacheFileExtOpenCL20);
+
+                    // html doc
+                    Console.WriteLine("Initialize HTML Doc");
+                    var docExt = new HtmlDocument();
+                    docExt.LoadHtml(htmlExt);
+                    var rootExt = docExt.DocumentNode;
+
+                    var extCL20 = new JObject();
+
+                    // Metadata
+                    {
+                        var metaData = new JObject();
+
+                        metaData["Language"] = "Open CL";
+                        metaData["Version"] = 2.0;
+                        metaData["Title"] = rootExt.SelectSingleNode("//div[@id='header']/h1").InnerText;
+                        metaData["Author"] = rootExt.SelectSingleNode("//span[@id='author']").InnerText;
+                        metaData["Revnumber"] = rootExt.SelectSingleNode("//span[@id='revnumber']").InnerText;
+                        metaData["LastUpdate"] = rootExt.SelectSingleNode("//div[@id='footer-text']").LastChild.InnerText.Trim();
+
+                        extCL20["Metadata"] = metaData;
+                    }
+
+                    // Extended Instructions
+                    {
+                        var extendedInstructions = new JArray();
+
+                        foreach (var tbody in rootExt.SelectNodes("//tbody"))
+                        {
+                            var extInst = new JObject();
+
+                            var tr = tbody.FirstChild.NextSibling;
+                            var td = tr.FirstChild.NextSibling;
+                            
+                            // Enums => ignore
+                            {
+
+                                if (tbody.ParentNode.ParentNode.FirstChild.NextSibling.Id ==
+                                    "_a_id_imageformatenc_a_image_format_encoding")
+                                {
+                                    continue;
+                                }
+                            }
+
+                            var name = td.FirstChild.FirstChild.NextSibling.InnerText;
+
+                            extInst["Name"] = name.ToCamelCase();
+                            extInst["OriginalName"] = name;
+
+                            // Description
+                            {
+                                var comment = new StringBuilder();
+                                var commentPlain = new StringBuilder();
+
+                                // The complete comment is written in different rows => get all
+                                foreach (var commentBlock in td.ChildNodes)
+                                {
+                                    comment.Append(commentBlock.InnerHtml);
+                                    commentPlain.Append(commentBlock.InnerText);
+                                }
+
+                                var comInnerHtml = comment.ToString();
+                                var comInnerText = commentPlain.ToString();
+
+                                // Replace <br> to <br />
+                                comInnerHtml = comInnerHtml == name
+                                    ? ""
+                                    : comInnerHtml.Substring(2 * name.Length +
+                                                             "<a id=\"acos\"></a><strong></strong>".Length)
+                                        .Trim()
+                                        .Replace("<br>", "<br />");
+
+                                // Delete "/n" or "<br /> at beginning and at the end
+                                if (comInnerHtml.StartsWith("<br />\n"))
+                                    comInnerHtml = comInnerHtml.Substring("<br />\n".Length);
+                                if (comInnerHtml.EndsWith("\n<br />"))
+                                    comInnerHtml = comInnerHtml.Remove(comInnerHtml.Length - "\n<br />".Length);
+                                if (comInnerText.StartsWith(name + "\n\n"))
+                                    comInnerText = comInnerText.Substring(name.Length + "\n\n".Length);
+                                if (comInnerText.EndsWith("\n"))
+                                    comInnerText = comInnerText.Remove(comInnerText.Length - "\n".Length);
+
+                                extInst["Description"] = comInnerHtml;
+                                extInst["DescriptionPlain"] = comInnerText;
+                            }
+
+
+                            // Category
+                            var cat = tbody.ParentNode.ParentNode.FirstChild.NextSibling.InnerText;
+                            {
+                                cat = cat.Substring(cat.IndexOf(" ")).Trim().ToCamelCase();
+                                extInst["Category"] = cat;
+                            }
+
+                            // Number and Params
+                            {
+                                var row = tbody.LastChild.PreviousSibling;
+
+                                var operands = new JArray();
+
+                                //TODO: implement ImageEncoding
+                                if (cat == "ImageEncoding" || cat == "SamplerEncoding")
+                                    continue;
+
+                                // Start at 6th column (Number)
+                                // After Number there are only params
+                                for (int i = 11; i < row.ChildNodes.Count; i++)
+                                {
+                                    var column = row.ChildNodes[i];
+                                    int nr;
+                                    var operand = new JObject();
+
+                                    // No empty content
+                                    if (column.InnerText == "" || column.InnerText == "\n")
+                                        continue;
+
+                                    // Number
+                                    else if (int.TryParse(column.InnerText, out nr))
+                                        extInst["Number"] = nr;
+                                    // Operands
+                                    else
+                                    {
+                                        // LiteralNumber
+                                        if (column.InnerText.Contains("Literal Number"))
+                                        {
+                                            var a = column.InnerText.GetLinkedNameAndType(false, true);
+                                            operand["Name"] = a[0];
+                                            operand["Type"] = a[1];
+                                            operands.Add(operand);
+                                        }
+                                        // printf -> addionalArguemnts as ID Array
+                                        else if (column.InnerText.StartsWith("&lt;id&gt;, &lt;id&gt;,"))
+                                        {
+                                            operand["Name"] = "AdditionalArguments";
+                                            operand["Type"] = "ID[]";
+                                        }
+                                        // IDs
+                                        else
+                                        {
+                                            operand["Name"] = WebUtility.HtmlDecode(column.InnerText).GetName(false);
+                                            operand["Tpe"] = "ID";
+                                            operands.Add(operand);
+                                        }
+                                    }
+                                }
+
+                                extInst["Operands"] = operands;
+                            }
+
+                            extendedInstructions.Add(extInst);
+
+                        }
+                        extCL20["ExtendedInstructions"] = extendedInstructions;
+                    }
+
+                    // Enums
+                    {
+                        var enums = new JArray();
+
+                        foreach (var tbody in rootExt.SelectNodes("//tbody"))
+                        {
+                            var enu = new JObject();
+
+                            // Enums ID
+                            if (tbody.ParentNode.ParentNode.FirstChild.NextSibling.Id ==
+                                "_a_id_imageformatenc_a_image_format_encoding")
+                            {
+                                var values = new JArray();
+
+                                Debug.Assert(tbody.ParentNode.ChildNodes.Count > 5);
+
+                                enu["Name"] = tbody.ParentNode.ChildNodes[5].InnerText.Trim();
+
+                                // Values
+                                foreach (var tr in tbody.ChildNodes)
+                                {
+                                    var val = new JObject();
+                                    if (tr.Name == "tr")
+                                    {
+                                        Debug.Assert(tr.ChildNodes.Count > 3);
+
+                                        val["Value"] = int.Parse(tr.ChildNodes[1].InnerText);
+                                        val["Name"] = tr.ChildNodes[3].InnerText;
+
+                                        values.Add(val);
+                                    }
+                                }
+
+                                enu["Values"] = values;
+
+                                enums.Add(enu);
+
+                            }
+                        }
+
+                        extCL20["Enums"] = enums;
+                    }
+
+                    extJson.Add(extCL20);
+
+                }
+
+                #endregion
+
+                #region CL21
+                {
+                    // Load File
+
+                    // cached spec
+                    Console.WriteLine("Read HTML from " + cacheFileExtOpenCL21);
+                    var htmlExt = File.ReadAllText(cacheFileExtOpenCL21);
+
+                    // html doc
+                    Console.WriteLine("Initialize HTML Doc");
+                    var docExt = new HtmlDocument();
+                    docExt.LoadHtml(htmlExt);
+                    var rootExt = docExt.DocumentNode;
+
+                    var extCL21 = new JObject();
+
+                    // Metadata
+                    {
+                        var metaData = new JObject();
+
+                        metaData["Language"] = "Open CL";
+                        metaData["Version"] = 2.0;
+                        metaData["Title"] = rootExt.SelectSingleNode("//div[@id='header']/h1").InnerText;
+                        metaData["Author"] = rootExt.SelectSingleNode("//span[@id='author']").InnerText;
+                        metaData["Revnumber"] = rootExt.SelectSingleNode("//span[@id='revnumber']").InnerText;
+                        metaData["LastUpdate"] = rootExt.SelectSingleNode("//div[@id='footer-text']").LastChild.InnerText.Trim();
+
+                        extCL21["Metadata"] = metaData;
+                    }
+
+                    // Extended Instructions
+                    {
+                        var extendedInstructions = new JArray();
+
+                        foreach (var tbody in rootExt.SelectNodes("//tbody"))
+                        {
+                            var extInst = new JObject();
+
+                            var tr = tbody.FirstChild.NextSibling;
+                            var td = tr.FirstChild.NextSibling;
+
+                            // Enums => ignore
+                            {
+
+                                if (tbody.ParentNode.ParentNode.FirstChild.NextSibling.Id ==
+                                    "_a_id_imageformatenc_a_image_format_encoding")
+                                {
+                                    continue;
+                                }
+                            }
+
+                            var name = td.FirstChild.FirstChild.NextSibling.InnerText;
+
+                            extInst["Name"] = name.ToCamelCase();
+                            extInst["OriginalName"] = name;
+
+                            // Description
+                            {
+                                var comment = new StringBuilder();
+                                var commentPlain = new StringBuilder();
+
+                                // The complete comment is written in different rows => get all
+                                foreach (var commentBlock in td.ChildNodes)
+                                {
+                                    comment.Append(commentBlock.InnerHtml);
+                                    commentPlain.Append(commentBlock.InnerText);
+                                }
+
+                                var comInnerHtml = comment.ToString();
+                                var comInnerText = commentPlain.ToString();
+
+                                // Replace <br> to <br />
+                                comInnerHtml = comInnerHtml == name
+                                    ? ""
+                                    : comInnerHtml.Substring(2 * name.Length +
+                                                             "<a id=\"acos\"></a><strong></strong>".Length)
+                                        .Trim()
+                                        .Replace("<br>", "<br />");
+
+                                // Delete "/n" or "<br /> at beginning and at the end
+                                if (comInnerHtml.StartsWith("<br />\n"))
+                                    comInnerHtml = comInnerHtml.Substring("<br />\n".Length);
+                                if (comInnerHtml.EndsWith("\n<br />"))
+                                    comInnerHtml = comInnerHtml.Remove(comInnerHtml.Length - "\n<br />".Length);
+                                if (comInnerText.StartsWith(name + "\n\n"))
+                                    comInnerText = comInnerText.Substring(name.Length + "\n\n".Length);
+                                if (comInnerText.EndsWith("\n"))
+                                    comInnerText = comInnerText.Remove(comInnerText.Length - "\n".Length);
+
+                                extInst["Description"] = comInnerHtml;
+                                extInst["DescriptionPlain"] = comInnerText;
+                            }
+
+
+                            // Category
+                            var cat = tbody.ParentNode.ParentNode.FirstChild.NextSibling.InnerText;
+                            {
+                                cat = cat.Substring(cat.IndexOf(" ")).Trim().ToCamelCase();
+                                extInst["Category"] = cat;
+                            }
+
+                            // Number and Params
+                            {
+                                var row = tbody.LastChild.PreviousSibling;
+
+                                var operands = new JArray();
+
+                                //TODO: implement ImageEncoding
+                                if (cat == "ImageEncoding" || cat == "SamplerEncoding")
+                                    continue;
+
+                                // Start at 6th column (Number)
+                                // After Number there are only params
+                                for (int i = 11; i < row.ChildNodes.Count; i++)
+                                {
+                                    var column = row.ChildNodes[i];
+                                    int nr;
+                                    var operand = new JObject();
+
+                                    // No empty content
+                                    if (column.InnerText == "" || column.InnerText == "\n")
+                                        continue;
+
+                                    // Number
+                                    else if (int.TryParse(column.InnerText, out nr))
+                                        extInst["Number"] = nr;
+                                    // Operands
+                                    else
+                                    {
+                                        // LiteralNumber
+                                        if (column.InnerText.Contains("Literal Number"))
+                                        {
+                                            var a = column.InnerText.GetLinkedNameAndType(false, true);
+                                            operand["Name"] = a[0];
+                                            operand["Type"] = a[1];
+                                            operands.Add(operand);
+                                        }
+                                        // printf -> addionalArguemnts as ID Array
+                                        else if (column.InnerText.StartsWith("&lt;id&gt;, &lt;id&gt;,"))
+                                        {
+                                            operand["Name"] = "AdditionalArguments";
+                                            operand["Type"] = "ID[]";
+                                        }
+                                        // IDs
+                                        else
+                                        {
+                                            operand["Name"] = WebUtility.HtmlDecode(column.InnerText).GetName(false);
+                                            operand["Tpe"] = "ID";
+                                            operands.Add(operand);
+                                        }
+                                    }
+                                }
+
+                                extInst["Operands"] = operands;
+                            }
+
+                            extendedInstructions.Add(extInst);
+
+                        }
+                        extCL21["ExtendedInstructions"] = extendedInstructions;
+                    }
+
+                    // Enums
+                    {
+                        var enums = new JArray();
+
+                        foreach (var tbody in rootExt.SelectNodes("//tbody"))
+                        {
+                            var enu = new JObject();
+
+                            // Enums ID
+                            if (tbody.ParentNode.ParentNode.FirstChild.NextSibling.Id ==
+                                "_a_id_imageformatenc_a_image_format_encoding")
+                            {
+                                var values = new JArray();
+
+                                Debug.Assert(tbody.ParentNode.ChildNodes.Count > 5);
+
+                                enu["Name"] = tbody.ParentNode.ChildNodes[5].InnerText.Trim();
+
+                                // Values
+                                foreach (var tr in tbody.ChildNodes)
+                                {
+                                    var val = new JObject();
+                                    if (tr.Name == "tr")
+                                    {
+                                        Debug.Assert(tr.ChildNodes.Count > 3);
+
+                                        val["Value"] = int.Parse(tr.ChildNodes[1].InnerText);
+                                        val["Name"] = tr.ChildNodes[3].InnerText;
+
+                                        values.Add(val);
+                                    }
+                                }
+
+                                enu["Values"] = values;
+
+                                enums.Add(enu);
+
+                            }
+                        }
+
+                        extCL21["Enums"] = enums;
+                    }
+
+                    extJson.Add(extCL21);
 
                 }
 
