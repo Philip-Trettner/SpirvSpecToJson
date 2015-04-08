@@ -89,14 +89,17 @@ namespace SpirvSpecToJson
             return a;
 
         }
+
         /// <summary>
         /// Get the type and the name of operands that got a link
         /// 1. Element: Name, 2. Element: Type
         /// </summary>
         /// <param name="text"></param>
+        /// <param name="nameToCamelCase"></param>
+        /// <param name="typeToCamelCase"></param>
         /// <returns>1. Element: Name
         /// 2. Element: Type</returns>
-        public static string[] GetLinkedNameAndType(this string text)
+        public static string[] GetLinkedNameAndType(this string text, bool nameToCamelCase, bool typeToCamelCase)
         {
             var a = new string[2];
 
@@ -115,8 +118,8 @@ namespace SpirvSpecToJson
                 }
                 else
                 {
-                    a[0] = text.ToCamelCase();
-                    a[1] = text.ToCamelCase();
+                    a[1] = typeToCamelCase ? text.ToCamelCase() : text;
+                    a[0] = nameToCamelCase ? text.ToCamelCase() : text;
                 }
             }
             else
@@ -134,25 +137,35 @@ namespace SpirvSpecToJson
                 {
                     Debug.Assert(sa.Length > 2);
 
+                    a[1] = typeToCamelCase ? sa[0].ToCamelCase() + sa[1].ToCamelCase() : sa[0] + sa[1];
+
                     a[1] = sa[0].ToCamelCase() + sa[1].ToCamelCase();
 
-                    for (int i = 2; i < sa.Length; i++)
-                        a[0] += sa[i].ToCamelCase();
+                    if(nameToCamelCase)
+                        for (int i = 2; i < sa.Length; i++)
+                            a[0] += sa[i].ToCamelCase();
+                    else
+                        for (int i = 2; i < sa.Length; i++)
+                            a[0] += sa[i];
                 }
                 else
                 {
                     Debug.Assert(sa.Length > 3);
 
-                    a[1] = sa[0].ToCamelCase() + sa[1].ToCamelCase() + sa[2].ToCamelCase();
-                    for (int i = 3; i < sa.Length; i++)
-                        a[0] += sa[i].ToCamelCase();
+                    a[1] = typeToCamelCase ? sa[0].ToCamelCase() + sa[1].ToCamelCase() + sa[2].ToCamelCase() : sa[0] + sa[1] + sa[2];
+                    
+                    if (nameToCamelCase)
+                        for (int i = 3; i < sa.Length; i++)
+                            a[0] += sa[i].ToCamelCase();
+                    else
+                        for (int i = 3; i < sa.Length; i++)
+                            a[0] += sa[i];
                 }
             }
             return a;
         }
 
       
-
         /// <summary>
         /// Convert string into CamelCase
         /// </summary>
